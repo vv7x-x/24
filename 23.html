@@ -1,0 +1,1703 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>الأرشيف المحظور — مخطوطات لا يجرؤ أحد على نسيانها</title>
+<meta name="description" content="أرشيف سحري للمخطوطات المحظورة — كتب نفسية، خيالية، ورعب تنتظر من يجرؤ على فتحها.">
+
+<link href="https://fonts.googleapis.com/css2?family=Reem+Kufi:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,700;1,400&family=Noto+Naskh+Arabic:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.2/anime.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/motion@10.16.2/dist/motion.js"></script>
+
+<style>
+/* ═══════════════════════════════════
+   DESIGN TOKENS
+   ═══════════════════════════════════ */
+:root {
+    --void: #07060a;
+    --ink: #0e0d14;
+    --parchment: #1a1720;
+    --amber: #c8973e;
+    --amber-dim: rgba(200, 151, 62, 0.15);
+    --amber-glow: rgba(200, 151, 62, 0.5);
+    --bone: #e8dcc8;
+    --ash: #7a7586;
+    --crimson: #8b2f3a;
+    --indigo: #2e3a6e;
+    --emerald: #2e6e4a;
+    --smoke: rgba(255,255,255,0.04);
+    --font-display: 'Reem Kufi', sans-serif;
+    --font-body: 'Noto Naskh Arabic', serif;
+    --font-accent: 'Playfair Display', serif;
+    --radius: 4px;
+    --ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ═══════════════════════════════════
+   RESET & BASE
+   ═══════════════════════════════════ */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+    background: var(--void);
+    color: var(--bone);
+    font-family: var(--font-body);
+    overflow-x: hidden;
+    cursor: none;
+    line-height: 1.7;
+}
+
+::selection { background: var(--amber); color: var(--void); }
+
+/* Custom cursor */
+.cursor-dot {
+    position: fixed; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--amber); pointer-events: none; z-index: 99999;
+    transition: transform 0.1s; mix-blend-mode: difference;
+}
+.cursor-ring {
+    position: fixed; width: 36px; height: 36px; border-radius: 50%;
+    border: 1px solid var(--amber); pointer-events: none; z-index: 99998;
+    transition: all 0.15s var(--ease); transform: translate(-50%, -50%);
+    mix-blend-mode: difference;
+}
+.cursor-ring.hover { transform: translate(-50%, -50%) scale(1.8); border-color: var(--bone); }
+
+/* ═══════════════════════════════════
+   GRAIN OVERLAY & ATMOSPHERE
+   ═══════════════════════════════════ */
+.grain {
+    position: fixed; inset: 0; z-index: 9000; pointer-events: none;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    background-size: 128px 128px;
+}
+
+.vignette {
+    position: fixed; inset: 0; z-index: 8999; pointer-events: none;
+    background: radial-gradient(ellipse at center, transparent 40%, var(--void) 100%);
+}
+
+.mouse-light {
+    position: fixed; inset: 0; z-index: 2; pointer-events: none;
+    background: radial-gradient(800px circle at var(--mx, 50%) var(--my, 50%), rgba(200, 151, 62, 0.06), transparent 80%);
+}
+
+.fog {
+    position: fixed; inset: 0; z-index: 4; pointer-events: none;
+    background: url('https://www.transparenttextures.com/patterns/asfalt-dark.png');
+    mask-image: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), transparent 20%, black 80%);
+    opacity: 0.1;
+    animation: fogDrift 60s linear infinite;
+}
+@keyframes fogDrift {
+    from { background-position: 0 0; }
+    to { background-position: 1000px 500px; }
+}
+
+/* ═══════════════════════════════════
+   THREE.JS 3D SCENE
+   ═══════════════════════════════════ */
+#three-bg {
+    position: fixed; inset: 0; z-index: 1; pointer-events: none;
+}
+#dust {
+    position: fixed; inset: 0; z-index: 3; pointer-events: none;
+}
+
+/* ═══════════════════════════════════
+   SVG LOADING SIGIL
+   ═══════════════════════════════════ */
+.loading-sigil svg {
+    width: 100%; height: 100%;
+}
+.loading-sigil svg path {
+    fill: none;
+    stroke: var(--amber);
+    stroke-width: 1;
+}
+
+/* Typewriter cursor blink */
+.typewriter-cursor {
+    display: inline-block;
+    width: 2px; height: 1.2em;
+    background: var(--amber);
+    margin-right: 4px;
+    vertical-align: text-bottom;
+    animation: cursorBlink 0.8s step-end infinite;
+}
+@keyframes cursorBlink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+
+/* ═══════════════════════════════════
+   LOADING SEQUENCE
+   ═══════════════════════════════════ */
+.loading-veil {
+    position: fixed; inset: 0; z-index: 100000;
+    background: var(--void);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    transition: opacity 0.8s var(--ease);
+}
+.loading-veil.done { opacity: 0; pointer-events: none; }
+
+.loading-sigil {
+    width: 100px; height: 100px; position: relative;
+    margin-bottom: 30px;
+}
+
+.loading-text {
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+    letter-spacing: 8px;
+    text-transform: uppercase;
+    color: var(--ash);
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+
+/* ═══════════════════════════════════
+   LAYOUT
+   ═══════════════════════════════════ */
+.archive {
+    max-width: 1400px; margin: 0 auto;
+    padding: 0 clamp(20px, 5vw, 80px);
+}
+
+/* ═══════════════════════════════════
+   HEADER — THE GATE
+   ═══════════════════════════════════ */
+.gate {
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    position: relative; text-align: center;
+    padding: 40px 20px;
+}
+
+/* Floating Runes Background */
+.floating-runes {
+    position: fixed; inset: 0; z-index: 2; pointer-events: none; overflow: hidden;
+}
+.rune {
+    position: absolute;
+    font-size: 1.4rem;
+    color: var(--amber);
+    opacity: 0;
+    filter: blur(0.5px);
+    animation: runeFloat var(--dur, 20s) var(--delay, 0s) infinite linear;
+}
+@keyframes runeFloat {
+    0%   { transform: translateY(110vh) rotate(0deg); opacity: 0; }
+    5%   { opacity: 0.08; }
+    50%  { opacity: 0.15; }
+    95%  { opacity: 0.05; }
+    100% { transform: translateY(-10vh) rotate(360deg); opacity: 0; }
+}
+
+.gate-ornament {
+    width: 120px; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--amber), transparent);
+    margin: 0 auto 40px;
+    position: relative;
+    animation: ornamentBreathe 3s ease-in-out infinite;
+}
+.gate-ornament::before {
+    content: '◆'; position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--amber); font-size: 0.6rem;
+    background: var(--void); padding: 0 12px;
+    animation: ornamentSpin 8s linear infinite;
+}
+@keyframes ornamentBreathe {
+    0%, 100% { width: 120px; opacity: 0.6; }
+    50% { width: 200px; opacity: 1; }
+}
+@keyframes ornamentSpin {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+.gate-title {
+    font-family: var(--font-display);
+    font-size: clamp(2.8rem, 8vw, 5.5rem);
+    font-weight: 700;
+    color: var(--bone);
+    line-height: 1.1;
+    margin-bottom: 24px;
+    opacity: 1;
+}
+.gate-title .char {
+    display: inline-block;
+    opacity: 0;
+    transform: translateY(40px) rotateX(90deg);
+}
+
+.gate-title span {
+    display: block;
+    font-family: var(--font-accent);
+    font-style: italic;
+    font-weight: 400;
+    font-size: 0.35em;
+    color: var(--amber);
+    letter-spacing: 6px;
+    margin-top: 16px;
+    opacity: 0;
+}
+
+/* Shimmer effect on title */
+.gate-title::after {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 60%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(200,151,62,0.08), transparent);
+    animation: shimmer 4s ease-in-out infinite;
+}
+@keyframes shimmer {
+    0% { left: -100%; }
+    100% { left: 200%; }
+}
+
+.gate-subtitle {
+    font-family: var(--font-body);
+    font-size: 1.1rem;
+    color: var(--ash);
+    max-width: 500px;
+    line-height: 2;
+    opacity: 0; transform: translateY(20px);
+    overflow: hidden;
+}
+.gate-subtitle .word {
+    display: inline-block;
+    opacity: 0;
+    transform: translateY(15px);
+}
+
+.gate-scroll-hint {
+    position: absolute; bottom: 40px;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    color: var(--ash); font-size: 0.7rem; letter-spacing: 4px;
+    font-family: var(--font-display);
+    opacity: 0;
+}
+.gate-scroll-hint .line {
+    width: 1px; height: 40px;
+    background: linear-gradient(to bottom, var(--amber), transparent);
+    animation: lineGrow 2s ease-in-out infinite;
+}
+@keyframes lineGrow {
+    0%, 100% { transform: scaleY(1); opacity: 1; }
+    50% { transform: scaleY(1.5); opacity: 0.5; }
+}
+
+/* ═══════════════════════════════════
+   SEARCH & FILTERS — THE SEAL
+   ═══════════════════════════════════ */
+.seal {
+    padding: 100px 0 60px;
+    display: flex; flex-direction: column;
+    align-items: center; gap: 40px;
+}
+
+.search-field {
+    position: relative; width: 100%; max-width: 560px;
+}
+.search-field input {
+    width: 100%; padding: 20px 30px;
+    background: var(--ink);
+    border: 1px solid rgba(200, 151, 62, 0.1);
+    color: var(--bone);
+    font-family: var(--font-body);
+    font-size: 1rem;
+    outline: none;
+    border-radius: var(--radius);
+    transition: all 0.5s var(--ease);
+}
+.search-field input::placeholder { color: var(--ash); }
+.search-field input:focus {
+    border-color: var(--amber);
+    box-shadow: 0 0 0 1px var(--amber), 0 20px 60px -20px var(--amber-dim);
+}
+.search-field .search-icon {
+    position: absolute; left: 20px; top: 50%; transform: translateY(-50%);
+    color: var(--ash); font-size: 0.85rem; pointer-events: none;
+    transition: color 0.3s;
+}
+.search-field input:focus ~ .search-icon { color: var(--amber); }
+
+.category-tabs {
+    display: flex; gap: 4px;
+    background: var(--ink);
+    border-radius: var(--radius);
+    padding: 4px;
+    border: 1px solid rgba(255,255,255,0.04);
+}
+.tab {
+    padding: 10px 28px;
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--ash);
+    background: none; border: none;
+    cursor: pointer;
+    border-radius: var(--radius);
+    transition: all 0.3s var(--ease);
+    position: relative;
+}
+.tab:hover { color: var(--bone); }
+.tab.active {
+    background: var(--amber);
+    color: var(--void);
+    font-weight: 700;
+    box-shadow: 0 4px 20px var(--amber-dim);
+}
+
+/* ═══════════════════════════════════
+   MANUSCRIPT GRID — THE SPATIAL VAULT
+   ═══════════════════════════════════ */
+.vault {
+    padding: 100px 0 200px;
+    perspective: 2500px; /* Enhanced spatial depth */
+}
+
+.manuscripts {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 80px;
+    transform-style: preserve-3d;
+}
+
+.manuscript {
+    position: relative;
+    background: rgba(13, 12, 18, 0.9); /* Deep Obsidian */
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(200, 151, 62, 0.1);
+    border-radius: var(--radius);
+    padding: 32px;
+    cursor: pointer;
+    transition: border-color 0.6s var(--ease), box-shadow 0.6s var(--ease), transform 0.1s linear;
+    opacity: 0;
+    transform: translateY(150px) translate3d(0,0,-500px) rotateX(30deg);
+    transform-style: preserve-3d;
+    will-change: transform, opacity;
+}
+
+/* Floating Drift Animation — Zero Gravity feel */
+@keyframes artifactDrift {
+    0%, 100% { transform: translateY(0) rotateY(0) translateZ(0); }
+    33% { transform: translateY(-15px) rotateY(2deg) translateZ(20px); }
+    66% { transform: translateY(12px) rotateY(-2deg) translateZ(-10px); }
+}
+
+.manuscript.awakened {
+    animation: artifactDrift var(--drift-dur, 10s) ease-in-out infinite;
+    animation-delay: var(--drift-delay, 0s);
+}
+
+.manuscript.visible {
+    opacity: 1;
+    transform: translateY(0) translate3d(0,0,0) rotateX(0);
+}
+
+/* Gold Emissive Border */
+.manuscript::before {
+    content: '';
+    position: absolute; inset: -1px;
+    border-radius: var(--radius);
+    padding: 1px;
+    background: linear-gradient(135deg, var(--amber), transparent, var(--amber-glow));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0.15;
+    transition: opacity 0.5s;
+    pointer-events: none;
+}
+.manuscript:hover::before { opacity: 0.8; }
+
+/* Mouse Dynamic Glow */
+.manuscript::after {
+    content: '';
+    position: absolute; inset: 0;
+    border-radius: var(--radius);
+    opacity: 0;
+    background: radial-gradient(circle at var(--card-mx, 50%) var(--card-my, 50%), rgba(200,151,62,0.12) 0%, transparent 70%);
+    pointer-events: none;
+    transition: opacity 0.6s;
+    z-index: 10;
+}
+.manuscript:hover::after { opacity: 1; }
+
+.manuscript:hover {
+    border-color: var(--amber);
+    box-shadow: 0 40px 100px -20px rgba(0,0,0,1), 
+                0 0 40px var(--amber-dim);
+    z-index: 100;
+}
+
+.ms-cover {
+    position: relative;
+    overflow: hidden;
+}
+.ms-cover img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    transition: transform 1.2s var(--ease), filter 0.5s;
+    filter: saturate(0.3) brightness(0.7);
+}
+.manuscript:hover .ms-cover img {
+    transform: scale(1.08);
+    filter: saturate(0.6) brightness(0.8);
+}
+
+/* Ink wash overlay on cover */
+.ms-cover::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(0deg, var(--ink) 0%, transparent 60%);
+    z-index: 2;
+}
+
+.ms-category {
+    position: absolute; top: 16px; right: 16px; z-index: 4;
+    font-family: var(--font-display);
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 2px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.08);
+}
+.ms-category[data-cat="نفسي"] { background: rgba(46, 58, 110, 0.6); color: #8b9fd9; }
+.ms-category[data-cat="خيال"] { background: rgba(46, 110, 74, 0.6); color: #7dd9a8; }
+.ms-category[data-cat="رعب"] { background: rgba(139, 47, 58, 0.6); color: #d98b95; }
+
+.ms-body {
+    padding: 28px 28px 24px;
+}
+.ms-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.5rem;
+    color: var(--bone);
+    margin-bottom: 10px;
+    line-height: 1.3;
+    transition: color 0.3s;
+}
+.manuscript:hover .ms-title { color: var(--amber); }
+
+.ms-author {
+    font-family: var(--font-body);
+    font-size: 0.8rem;
+    color: var(--ash);
+    margin-bottom: 16px;
+    display: flex; align-items: center; gap: 6px;
+}
+.ms-author::before {
+    content: '';
+    width: 16px; height: 1px;
+    background: var(--ash);
+}
+
+.ms-excerpt {
+    font-size: 0.9rem;
+    color: rgba(232, 220, 200, 0.5);
+    line-height: 1.8;
+    margin-bottom: 24px;
+}
+
+.ms-footer {
+    display: flex; gap: 12px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255,255,255,0.04);
+}
+
+.ms-btn {
+    flex: 1; padding: 12px 0; text-align: center;
+    font-family: var(--font-display);
+    font-size: 0.8rem; font-weight: 600;
+    letter-spacing: 2px;
+    border: none; cursor: pointer;
+    border-radius: var(--radius);
+    transition: all 0.3s var(--ease);
+}
+.ms-btn-primary {
+    background: var(--amber);
+    color: var(--void);
+    position: relative;
+    overflow: hidden;
+}
+.ms-btn-primary::before {
+    content: '';
+    position: absolute; top: 50%; left: 50%;
+    width: 0; height: 0;
+    background: rgba(255,255,255,0.2);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+.ms-btn-primary:hover::before {
+    width: 300px; height: 300px;
+}
+.ms-btn-primary:hover {
+    box-shadow: 0 8px 30px var(--amber-dim);
+    transform: translateY(-3px) scale(1.02);
+}
+.ms-btn-ghost {
+    background: none;
+    border: 1px solid rgba(255,255,255,0.08);
+    color: var(--ash);
+    position: relative;
+    overflow: hidden;
+}
+.ms-btn-ghost::before {
+    content: '';
+    position: absolute; bottom: 0; left: 0;
+    width: 0; height: 2px;
+    background: var(--amber);
+    transition: width 0.4s var(--ease);
+}
+.ms-btn-ghost:hover::before { width: 100%; }
+.ms-btn-ghost:hover {
+    border-color: var(--amber);
+    color: var(--amber);
+}
+
+/* Empty state */
+.empty-vault {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--ash);
+    font-family: var(--font-body);
+}
+.empty-vault .sigil {
+    font-size: 2rem; margin-bottom: 20px;
+    opacity: 0.3;
+}
+
+/* ═══════════════════════════════════
+   MODAL — THE REVELATION
+   ═══════════════════════════════════ */
+.revelation {
+    position: fixed; inset: 0;
+    z-index: 50000;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(7, 6, 10, 0.95);
+    backdrop-filter: blur(30px);
+}
+.revelation.open { display: flex; }
+
+.rev-content {
+    width: 92%; max-width: 700px;
+    max-height: 90vh; overflow-y: auto;
+    background: var(--ink);
+    border: 1px solid rgba(200, 151, 62, 0.15);
+    border-radius: var(--radius);
+    position: relative;
+}
+.rev-content::-webkit-scrollbar { width: 4px; }
+.rev-content::-webkit-scrollbar-track { background: transparent; }
+.rev-content::-webkit-scrollbar-thumb { background: var(--amber-dim); border-radius: 2px; }
+
+.rev-close {
+    position: absolute; top: 20px; left: 20px; z-index: 10;
+    width: 40px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 50%; cursor: pointer;
+    color: var(--bone); font-size: 1.2rem;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s;
+}
+.rev-close:hover { border-color: var(--amber); color: var(--amber); transform: rotate(90deg); }
+
+.rev-hero {
+    position: relative; width: 100%; height: 320px; overflow: hidden;
+}
+.rev-hero img {
+    width: 100%; height: 100%; object-fit: cover;
+    filter: saturate(0.4) brightness(0.6);
+}
+.rev-hero::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(0deg, var(--ink) 0%, transparent 70%);
+}
+
+.rev-body { padding: 40px 48px 48px; }
+
+.rev-cat {
+    font-family: var(--font-display);
+    font-size: 0.65rem; font-weight: 600;
+    letter-spacing: 4px; text-transform: uppercase;
+    color: var(--amber); margin-bottom: 16px;
+}
+
+.rev-title {
+    font-family: var(--font-display);
+    font-size: clamp(1.8rem, 4vw, 2.5rem);
+    font-weight: 700;
+    color: var(--bone);
+    line-height: 1.2;
+    margin-bottom: 12px;
+}
+
+.rev-author {
+    font-size: 0.9rem; color: var(--ash);
+    margin-bottom: 32px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.rev-desc {
+    font-size: 1.05rem;
+    color: rgba(232, 220, 200, 0.7);
+    line-height: 2.2;
+    margin-bottom: 40px;
+}
+
+.rev-action {
+    display: inline-block;
+    padding: 16px 48px;
+    background: var(--amber);
+    color: var(--void);
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: 3px;
+    border: none; border-radius: var(--radius);
+    cursor: pointer;
+    transition: all 0.3s var(--ease);
+}
+.rev-action:hover {
+    box-shadow: 0 12px 40px var(--amber-dim);
+    transform: translateY(-3px);
+}
+
+/* ═══════════════════════════════════
+   SCROLL PROGRESS
+   ═══════════════════════════════════ */
+.scroll-progress {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: 2px; z-index: 90000;
+    background: transparent;
+}
+.scroll-progress .bar {
+    height: 100%; width: 0%;
+    background: var(--grad);
+    box-shadow: 0 0 12px var(--amber-glow);
+    transition: width 0.1s linear;
+}
+
+/* ═══════════════════════════════════
+   STATS COUNTER
+   ═══════════════════════════════════ */
+.vault-stats {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 0 40px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    margin-bottom: 40px;
+}
+.vault-stats .stat-label {
+    font-family: var(--font-display);
+    font-size: 0.75rem;
+    letter-spacing: 3px;
+    color: var(--ash);
+}
+.vault-stats .stat-count {
+    font-family: var(--font-accent);
+    font-size: 1.1rem;
+    color: var(--amber);
+    font-style: italic;
+}
+
+/* ═══════════════════════════════════
+   CARD GLOW ON HOVER (per category)
+   ═══════════════════════════════════ */
+.manuscript[data-cat="نفسي"]:hover {
+    box-shadow: 0 30px 80px -20px rgba(0,0,0,0.8),
+                0 0 0 1px var(--indigo),
+                0 0 60px -10px rgba(46, 58, 110, 0.2);
+    border-color: var(--indigo);
+}
+.manuscript[data-cat="خيال"]:hover {
+    box-shadow: 0 30px 80px -20px rgba(0,0,0,0.8),
+                0 0 0 1px var(--emerald),
+                0 0 60px -10px rgba(46, 110, 74, 0.2);
+    border-color: var(--emerald);
+}
+.manuscript[data-cat="رعب"]:hover {
+    box-shadow: 0 30px 80px -20px rgba(0,0,0,0.8),
+                0 0 0 1px var(--crimson),
+                0 0 60px -10px rgba(139, 47, 58, 0.2);
+    border-color: var(--crimson);
+}
+
+/* Category title colors on hover */
+.manuscript[data-cat="نفسي"]:hover .ms-title { color: #8b9fd9; }
+.manuscript[data-cat="خيال"]:hover .ms-title { color: #7dd9a8; }
+.manuscript[data-cat="رعب"]:hover .ms-title { color: #d98b95; }
+
+/* ═══════════════════════════════════
+   FOOTER SIGIL
+   ═══════════════════════════════════ */
+.footer-sigil {
+    text-align: center;
+    padding: 60px 20px 40px;
+    border-top: 1px solid rgba(255,255,255,0.03);
+}
+.footer-sigil p {
+    font-family: var(--font-display);
+    font-size: 0.7rem;
+    letter-spacing: 4px;
+    color: var(--ash);
+    opacity: 0.4;
+}
+
+/* ═══════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════ */
+@media (max-width: 768px) {
+    .manuscripts { grid-template-columns: 1fr; gap: 24px; }
+    .ms-cover { height: 240px; }
+    .rev-body { padding: 30px 24px 36px; }
+    .rev-hero { height: 220px; }
+    .cursor-dot, .cursor-ring { display: none; }
+    body { cursor: auto; }
+}
+
+@media (max-width: 480px) {
+    .gate-title { font-size: 2.2rem; }
+    .category-tabs { flex-wrap: wrap; justify-content: center; }
+    .tab { padding: 8px 20px; font-size: 0.8rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- Scroll Progress -->
+<div class="scroll-progress"><div class="bar" id="scrollBar"></div></div>
+
+<!-- Loading Veil -->
+<div class="loading-veil" id="loadingVeil">
+    <div class="loading-sigil">
+        <svg viewBox="0 0 100 100" id="sigilSvg">
+            <circle cx="50" cy="50" r="45" class="sigil-ring" id="sigilRing1" />
+            <circle cx="50" cy="50" r="32" class="sigil-ring" id="sigilRing2" />
+            <circle cx="50" cy="50" r="18" class="sigil-ring" id="sigilRing3" />
+            <polygon points="50,8 92,75 8,75" class="sigil-tri" id="sigilTri1" />
+            <polygon points="50,92 8,25 92,25" class="sigil-tri" id="sigilTri2" />
+            <circle cx="50" cy="50" r="4" fill="var(--amber)" class="sigil-core" />
+        </svg>
+    </div>
+    <div class="loading-text">جارٍ فتح الأرشيف</div>
+</div>
+
+<!-- Three.js 3D Background -->
+<div id="three-bg"></div>
+
+<!-- Atmosphere Layers -->
+<div class="grain"></div>
+<div class="vignette"></div>
+<div class="mouse-light" id="mouseLight"></div>
+<div class="fog"></div>
+<canvas id="dust"></canvas>
+
+<!-- Custom Cursor -->
+<div class="cursor-dot" id="cursorDot"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- ════════════════════════════════ -->
+<!--  THE GATE                       -->
+<!-- ════════════════════════════════ -->
+<!-- Floating Runes -->
+<div class="floating-runes" id="floatingRunes"></div>
+
+<section class="gate" id="gate">
+    <div class="gate-ornament"></div>
+    <h1 class="gate-title" id="gateTitle">
+        الأرشيف المحظور
+        <span>Forbidden Archive</span>
+    </h1>
+    <p class="gate-subtitle" id="gateSub">
+        مخطوطات لم تُكتب لتُنسى — بل لتفتح أقفالاً في العقل لم تكن تعلم بوجودها
+    </p>
+    <div class="gate-scroll-hint" id="scrollHint">
+        <span>انزل</span>
+        <div class="line"></div>
+    </div>
+</section>
+
+<!-- ════════════════════════════════ -->
+<!--  THE SEAL (Search & Filter)     -->
+<!-- ════════════════════════════════ -->
+<div class="archive">
+    <section class="seal" id="seal">
+        <div class="search-field">
+            <input type="text" id="searchInput" placeholder="ابحث في المحظورات...">
+            <span class="search-icon">⌕</span>
+        </div>
+        <div class="category-tabs" id="categoryTabs">
+            <button class="tab active" data-cat="الكل">الكل</button>
+            <button class="tab" data-cat="نفسي">نفسي</button>
+            <button class="tab" data-cat="خيال">خيال</button>
+            <button class="tab" data-cat="رعب">رعب</button>
+        </div>
+    </section>
+
+    <!-- ════════════════════════════════ -->
+    <!--  THE VAULT (Books Grid)         -->
+    <!-- ════════════════════════════════ -->
+    <section class="vault">
+        <div class="vault-stats">
+            <span class="stat-label">المخطوطات المتاحة</span>
+            <span class="stat-count" id="statCount">٤ مخطوطات</span>
+        </div>
+        <div class="manuscripts" id="vault"></div>
+    </section>
+
+    <footer class="footer-sigil">
+        <p>◆ n0x — الأرشيف المحظور ◆</p>
+    </footer>
+</div>
+
+<!-- Spatial Overlay for Portal -->
+<div class="spatial-overlay" id="portalOverlay"></div>
+
+<!-- Reader View (Dimensional Portal Goal) -->
+<div class="reader-view" id="readerView">
+    <div class="reader-close" onclick="closePortal()">&times;</div>
+    <div class="reader-content">
+        <h2 class="rev-title" id="readerTitle" style="text-align: center; margin-bottom: 40px; font-size: 3rem;"></h2>
+        <div class="reader-text" id="readerText"></div>
+    </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════
+   THREE.JS — 3D PARTICLE NEBULA
+   ═══════════════════════════════════ */
+(function initThreeScene() {
+    const container = document.getElementById('three-bg');
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    container.appendChild(renderer.domElement);
+
+    camera.position.z = 5;
+
+    // Particle system — golden dust nebula
+    const particleCount = 2000;
+    const positions = new Float32Array(particleCount * 3);
+    const velocities = [];
+    const sizes = new Float32Array(particleCount);
+
+    for (let i = 0; i < particleCount; i++) {
+        positions[i * 3] = (Math.random() - 0.5) * 20;
+        positions[i * 3 + 1] = (Math.random() - 0.5) * 20;
+        positions[i * 3 + 2] = (Math.random() - 0.5) * 15;
+        sizes[i] = Math.random() * 3 + 0.5;
+        velocities.push({
+            x: (Math.random() - 0.5) * 0.003,
+            y: (Math.random() - 0.5) * 0.003,
+            z: (Math.random() - 0.5) * 0.002
+        });
+    }
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+    const material = new THREE.PointsMaterial({
+        size: 0.04,
+        color: new THREE.Color(0xc8973e),
+        transparent: true,
+        opacity: 0.6,
+        blending: THREE.AdditiveBlending,
+        sizeAttenuation: true
+    });
+
+    const particles = new THREE.Points(geometry, material);
+    scene.add(particles);
+
+    // Connecting lines — constellation effect
+    const lineGeo = new THREE.BufferGeometry();
+    const lineMat = new THREE.LineBasicMaterial({
+        color: 0xc8973e,
+        transparent: true,
+        opacity: 0.06,
+        blending: THREE.AdditiveBlending
+    });
+    const lines = new THREE.LineSegments(lineGeo, lineMat);
+    scene.add(lines);
+
+    // Geometric sigil ring
+    const ringGeo = new THREE.RingGeometry(2.5, 2.55, 64);
+    const ringMat = new THREE.MeshBasicMaterial({
+        color: 0xc8973e,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.08
+    });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    scene.add(ring);
+
+    const ring2Geo = new THREE.RingGeometry(1.8, 1.83, 6);
+    const ring2 = new THREE.Mesh(ring2Geo, ringMat.clone());
+    ring2.material.opacity = 0.05;
+    scene.add(ring2);
+
+    // Mouse tracking
+    let targetX = 0, targetY = 0;
+    document.addEventListener('mousemove', e => {
+        targetX = (e.clientX / window.innerWidth - 0.5) * 2;
+        targetY = (e.clientY / window.innerHeight - 0.5) * 2;
+    });
+
+    // Resize
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Animation loop
+    function animateThree() {
+        requestAnimationFrame(animateThree);
+        const time = Date.now() * 0.001;
+        const posArr = geometry.attributes.position.array;
+
+        for (let i = 0; i < particleCount; i++) {
+            posArr[i * 3] += velocities[i].x;
+            posArr[i * 3 + 1] += velocities[i].y;
+            posArr[i * 3 + 2] += velocities[i].z;
+
+            // Boundary wrap
+            if (Math.abs(posArr[i * 3]) > 10) velocities[i].x *= -1;
+            if (Math.abs(posArr[i * 3 + 1]) > 10) velocities[i].y *= -1;
+            if (Math.abs(posArr[i * 3 + 2]) > 7.5) velocities[i].z *= -1;
+        }
+        geometry.attributes.position.needsUpdate = true;
+
+        // Update lines between close particles
+        const linePositions = [];
+        for (let i = 0; i < Math.min(particleCount, 200); i++) {
+            for (let j = i + 1; j < Math.min(particleCount, 200); j++) {
+                const dx = posArr[i*3] - posArr[j*3];
+                const dy = posArr[i*3+1] - posArr[j*3+1];
+                const dz = posArr[i*3+2] - posArr[j*3+2];
+                const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+                if (dist < 1.5) {
+                    linePositions.push(posArr[i*3], posArr[i*3+1], posArr[i*3+2]);
+                    linePositions.push(posArr[j*3], posArr[j*3+1], posArr[j*3+2]);
+                }
+            }
+        }
+        lineGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(linePositions), 3));
+
+        // Rotate particles and rings
+        particles.rotation.y = time * 0.05;
+        particles.rotation.x = time * 0.02;
+        ring.rotation.z = time * 0.1;
+        ring2.rotation.z = -time * 0.15;
+
+        // Mouse influence
+        camera.position.x += (targetX * 0.5 - camera.position.x) * 0.02;
+        camera.position.y += (-targetY * 0.5 - camera.position.y) * 0.02;
+        camera.lookAt(scene.position);
+
+        renderer.render(scene, camera);
+    }
+    animateThree();
+})();
+
+/* ═══════════════════════════════════
+   ANIME.JS — SVG SIGIL ANIMATION
+   ═══════════════════════════════════ */
+(function initSigilAnimation() {
+    // Animate SVG rings
+    anime({
+        targets: '#sigilRing1',
+        strokeDashoffset: [anime.setDashoffset, 0],
+        stroke: ['rgba(200,151,62,0)', 'rgba(200,151,62,1)'],
+        easing: 'easeInOutSine',
+        duration: 2000,
+        loop: true,
+        direction: 'alternate'
+    });
+
+    anime({
+        targets: '#sigilRing2',
+        strokeDashoffset: [anime.setDashoffset, 0],
+        stroke: ['rgba(200,151,62,0)', 'rgba(200,151,62,0.7)'],
+        easing: 'easeInOutQuad',
+        duration: 1800,
+        loop: true,
+        direction: 'alternate',
+        delay: 200
+    });
+
+    anime({
+        targets: '#sigilRing3',
+        strokeDashoffset: [anime.setDashoffset, 0],
+        stroke: ['rgba(200,151,62,0)', 'rgba(200,151,62,0.5)'],
+        easing: 'easeInOutCubic',
+        duration: 1500,
+        loop: true,
+        direction: 'alternate',
+        delay: 400
+    });
+
+    // Rotate rings
+    anime({
+        targets: '#sigilRing1',
+        rotate: 360,
+        easing: 'linear',
+        duration: 6000,
+        loop: true
+    });
+    anime({
+        targets: '#sigilRing2',
+        rotate: -360,
+        easing: 'linear',
+        duration: 4000,
+        loop: true
+    });
+    anime({
+        targets: '#sigilRing3',
+        rotate: 360,
+        easing: 'linear',
+        duration: 3000,
+        loop: true
+    });
+
+    // Triangles rotate & scale
+    anime({
+        targets: '#sigilTri1',
+        rotate: [0, 360],
+        scale: [1, 1.1, 1],
+        strokeDashoffset: [anime.setDashoffset, 0],
+        stroke: 'rgba(200,151,62,0.8)',
+        easing: 'linear',
+        duration: 5000,
+        loop: true
+    });
+    anime({
+        targets: '#sigilTri2',
+        rotate: [0, -360],
+        scale: [1, 0.9, 1],
+        strokeDashoffset: [anime.setDashoffset, 0],
+        stroke: 'rgba(200,151,62,0.6)',
+        easing: 'linear',
+        duration: 5000,
+        loop: true
+    });
+
+    // Core pulsing
+    anime({
+        targets: '.sigil-core',
+        r: [4, 7, 4],
+        opacity: [1, 0.5, 1],
+        easing: 'easeInOutSine',
+        duration: 1500,
+        loop: true
+    });
+})();
+
+/* ═══════════════════════════════════
+   TYPEWRITER EFFECT (Anime.js powered)
+   ═══════════════════════════════════ */
+function typewriterEffect(element, text, duration) {
+    element.innerHTML = '<span class="typewriter-cursor"></span>';
+    const chars = text.split('');
+    let i = 0;
+    const cursor = element.querySelector('.typewriter-cursor');
+
+    anime({
+        targets: { val: 0 },
+        val: chars.length,
+        round: 1,
+        easing: 'linear',
+        duration: duration || 2000,
+        update: function(anim) {
+            const current = Math.floor(anim.animations[0].currentValue);
+            if (current > i) {
+                for (let j = i; j < current; j++) {
+                    const span = document.createElement('span');
+                    span.textContent = chars[j];
+                    span.style.opacity = '0';
+                    element.insertBefore(span, cursor);
+                    anime({
+                        targets: span,
+                        opacity: [0, 1],
+                        translateY: [5, 0],
+                        easing: 'easeOutExpo',
+                        duration: 300
+                    });
+                }
+                i = current;
+            }
+        },
+        complete: function() {
+            // Remove cursor after a delay
+            setTimeout(() => {
+                anime({ targets: cursor, opacity: 0, duration: 500, easing: 'easeOutExpo' });
+            }, 2000);
+        }
+    });
+}
+
+/* ═══════════════════════════════════
+   ANIME.JS — CATEGORY TAB EFFECTS
+   ═══════════════════════════════════ */
+document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', function() {
+        // Ripple animation on click
+        anime({
+            targets: this,
+            scale: [1, 0.92, 1],
+            duration: 400,
+            easing: 'easeOutElastic(1, 0.5)'
+        });
+    });
+});
+
+/* ═══════════════════════════════════
+   DATA — THE CODEX
+   ═══════════════════════════════════ */
+const codex = [
+    {
+        title: "الذاكرة التي كذبت",
+        author: "يحيى رضا",
+        category: "نفسي",
+        image: "https://images.unsplash.com/photo-1518133910546-b6c2fb7d79e3?q=80&w=800",
+        excerpt: "في هذه المخطوطة، ستكتشف أن عقلك هو أكبر مخادع تقابله في حياتك.",
+        full: "في هذه المخطوطة، ستكتشف أن عقلك هو أكبر مخادع تقابله في حياتك. هل أنت مستعد للشك في كل ذكرياتك؟ رحلة مرعبة داخل متاهات الوعي حيث كل ذكرى قد تكون مجرد وهم صنعه عقلك الباطن لحمايتك — أو لتدميرك."
+    },
+    {
+        title: "إيلفار",
+        author: "مجهول",
+        category: "خيال",
+        image: "https://images.unsplash.com/photo-1532012197267-da84d127e765?q=80&w=800",
+        excerpt: "عالم من السحر القديم حيث الكلمات لها وزن الجبال.",
+        full: "عالم من السحر القديم حيث الكلمات لها وزن الجبال. ملحمة عن المعرفة المفقودة والمدن الضائعة في ضباب الزمن. الأساطير هنا ليست مجرد حكايات — بل هي قوانين الطبيعة ذاتها، مكتوبة بحبر النجوم على جلود التنانين."
+    },
+    {
+        title: "كتاب الظلال",
+        author: "الكيان",
+        category: "رعب",
+        image: "https://images.unsplash.com/photo-1509248961158-e54f6934749c?q=80&w=800",
+        excerpt: "تحذير: القراءة قد تستدعي أشياء لا تحب أن تراها في الظلام.",
+        full: "تحذير صريح: القراءة في هذا الكتاب قد تستدعي أشياء لا تحب أن تراها في الظلام. نصوص محفورة بدماء قديمة تكشف أسرار العوالم الموازية. كل صفحة تقلبها تفتح باباً لا يمكن إغلاقه — والظلال التي تقرأ عنها… تقرأك أيضاً."
+    },
+    {
+        title: "متاهة العقل",
+        author: "د. فراس",
+        category: "نفسي",
+        image: "https://images.unsplash.com/photo-1471180625745-944903837c22?q=80&w=800",
+        excerpt: "دليل عملي للغوص في أعماق الوعي وفهم الهلوسات النفسية.",
+        full: "دليل عملي للغوص في أعماق الوعي وفهم الهلوسات النفسية. كيف تبني واقعك الخاص؟ وهل المتاهات التي نسكنها هي سجون أم ملاذات آمنة؟ هذا الكتاب لا يجيب على الأسئلة — بل يعلّمك كيف تعيش بدون إجابات."
+    }
+];
+
+/* ═══════════════════════════════════
+   STATE
+   ═══════════════════════════════════ */
+let activeCat = "الكل";
+let searchTerm = "";
+
+/* ═══════════════════════════════════
+   CUSTOM CURSOR
+   ═══════════════════════════════════ */
+const dot = document.getElementById('cursorDot');
+const ring = document.getElementById('cursorRing');
+let mouseX = 0, mouseY = 0;
+
+document.addEventListener('mousemove', e => {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+    dot.style.left = mouseX - 3 + 'px';
+    dot.style.top = mouseY - 3 + 'px';
+    ring.style.left = mouseX + 'px';
+    ring.style.top = mouseY + 'px';
+
+    // Mouse light
+    document.getElementById('mouseLight').style.setProperty('--mx', mouseX + 'px');
+    document.getElementById('mouseLight').style.setProperty('--my', mouseY + 'px');
+});
+
+document.addEventListener('mouseover', e => {
+    const target = e.target;
+    if (target.closest('.manuscript') || target.closest('.tab') || target.closest('.ms-btn') || target.closest('.rev-close') || target.closest('.rev-action') || target.tagName === 'BUTTON' || target.tagName === 'INPUT') {
+        ring.classList.add('hover');
+    }
+});
+document.addEventListener('mouseout', e => {
+    const target = e.target;
+    if (target.closest('.manuscript') || target.closest('.tab') || target.closest('.ms-btn') || target.closest('.rev-close') || target.closest('.rev-action') || target.tagName === 'BUTTON' || target.tagName === 'INPUT') {
+        ring.classList.remove('hover');
+    }
+});
+
+/* ═══════════════════════════════════
+   DUST PARTICLES
+   ═══════════════════════════════════ */
+const canvas = document.getElementById('dust');
+const ctx = canvas.getContext('2d');
+let dustMotes = [];
+
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+class DustMote {
+    constructor() { this.init(); }
+    init() {
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height;
+        this.size = Math.random() * 1.5 + 0.3;
+        this.vx = (Math.random() - 0.5) * 0.3;
+        this.vy = -(Math.random() * 0.4 + 0.1);
+        this.alpha = Math.random() * 0.3 + 0.05;
+        this.fadeFactor = 0.0003 + Math.random() * 0.001;
+    }
+    update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.alpha -= this.fadeFactor;
+        if (this.alpha <= 0 || this.y < -10) this.init();
+    }
+    draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(200, 151, 62, ${this.alpha})`;
+        ctx.fill();
+    }
+}
+
+for (let i = 0; i < 80; i++) dustMotes.push(new DustMote());
+
+function animateDust() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    dustMotes.forEach(m => { m.update(); m.draw(); });
+    requestAnimationFrame(animateDust);
+}
+animateDust();
+
+/* ═══════════════════════════════════
+   FLOATING RUNES (ambient symbols)
+   ═══════════════════════════════════ */
+const runeSymbols = ['𓂀','𓃭','☽','⟁','◇','✦','𓇼','⌬','◎','⊹','⟐','𓆣'];
+const runesContainer = document.getElementById('floatingRunes');
+for (let i = 0; i < 18; i++) {
+    const r = document.createElement('span');
+    r.className = 'rune';
+    r.textContent = runeSymbols[Math.floor(Math.random() * runeSymbols.length)];
+    r.style.left = Math.random() * 100 + '%';
+    r.style.setProperty('--dur', (18 + Math.random() * 25) + 's');
+    r.style.setProperty('--delay', (-Math.random() * 30) + 's');
+    r.style.fontSize = (0.8 + Math.random() * 1.2) + 'rem';
+    runesContainer.appendChild(r);
+}
+
+/* ═══════════════════════════════════
+   RENDER MANUSCRIPTS
+   ═══════════════════════════════════ */
+const vault = document.getElementById('vault');
+
+function renderVault() {
+    const filtered = codex.filter(m => {
+        const catOk = activeCat === "الكل" || m.category === activeCat;
+        const searchOk = !searchTerm || m.title.includes(searchTerm) || m.author.includes(searchTerm);
+        return catOk && searchOk;
+    });
+
+    // Animate out existing cards
+    const existing = vault.querySelectorAll('.manuscript');
+    if (existing.length > 0) {
+        gsap.to(existing, {
+            opacity: 0, y: -30, scale: 0.9, duration: 0.3,
+            stagger: 0.05, ease: 'power2.in',
+            onComplete: () => buildVault(filtered)
+        });
+    } else {
+        buildVault(filtered);
+    }
+}
+
+function buildVault(filtered) {
+    vault.innerHTML = '';
+    if (typeof updateStats === 'function') updateStats(filtered.length);
+
+    if (filtered.length === 0) {
+        vault.innerHTML = `
+            <div class="empty-vault">
+                <div class="sigil">☽</div>
+                <p>لم يُعثر على مخطوطات بهذه التعويذة...</p>
+            </div>`;
+        gsap.from('.empty-vault', { opacity: 0, scale: 0.8, duration: 0.6, ease: 'back.out' });
+        return;
+    }
+
+    filtered.forEach((m, i) => {
+        const el = document.createElement('article');
+        el.className = 'manuscript';
+        el.id = `ms-${i}`;
+        
+        // Random drift properties
+        const driftDur = (15 + Math.random() * 20).toFixed(2);
+        const driftDelay = (-Math.random() * 20).toFixed(2);
+        el.style.setProperty('--drift-dur', `${driftDur}s`);
+        el.style.setProperty('--drift-delay', `${driftDelay}s`);
+
+        el.innerHTML = `
+            <div class="ms-cover">
+                <img src="${m.image}" alt="${m.title}" loading="lazy">
+            </div>
+            <span class="ms-category">${m.category}</span>
+            <div class="ms-body">
+                <h3 class="ms-title">${m.title}</h3>
+                <div class="ms-author">${m.author}</div>
+                <p class="ms-excerpt">${m.excerpt}</p>
+                <div class="ms-footer">
+                    <button class="ms-btn" onclick="portalTransition(${i})">إطلاع</button>
+                    <button class="ms-btn">تحميل</button>
+                </div>
+            </div>
+        `;
+        vault.appendChild(el);
+
+        // 🧲 Realistic Entrance (Motion One / Framer style)
+        const { animate, spring, stagger } = motion;
+        animate(el, 
+            { opacity: [0, 1], y: [100, 0], scale: [0.8, 1], rotateX: [20, 0] },
+            { 
+                duration: 0.8, 
+                delay: i * 0.1,
+                easing: spring({ stiffness: 100, damping: 15, mass: 1 }),
+                onComplete: () => el.classList.add('awakened')
+            }
+        );
+
+        // 🧲 Realistic Magnetic Interaction (Motion One / Framer style)
+        el.addEventListener('mousemove', e => {
+            if (document.body.classList.contains('reading')) return;
+            const { animate, spring } = motion;
+            const rect = el.getBoundingClientRect();
+            const cx = rect.width / 2, cy = rect.height / 2;
+            const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+            
+            const xMove = (mx - cx) / 10;
+            const yMove = (my - cy) / 10;
+            const rotateX = -(my - cy) / 20;
+            const rotateY = (mx - cx) / 20;
+
+            animate(el, {
+                x: xMove,
+                y: yMove,
+                rotateX: rotateX,
+                rotateY: rotateY,
+                translateZ: 40
+            }, {
+                easing: spring({ stiffness: 400, damping: 20 })
+            });
+
+            el.style.setProperty('--card-mx', `${mx}px`);
+            el.style.setProperty('--card-my', `${my}px`);
+        });
+
+        el.addEventListener('mouseleave', () => {
+            if (document.body.classList.contains('reading')) return;
+            motion.animate(el, {
+                x: 0, y: 0, rotateX: 0, rotateY: 0, translateZ: 0
+            }, {
+                easing: motion.spring({ stiffness: 200, damping: 12 })
+            });
+        });
+    });
+}
+
+/* ═══════════════════════════════════
+   DIMENSIONAL PORTAL TRANSITION
+   ═══════════════════════════════════ */
+function portalTransition(index) {
+    const el = document.getElementById(`ms-${index}`);
+    const data = codex[index];
+    const { animate, spring, stagger } = motion;
+    
+    document.body.classList.add('reading');
+    el.classList.add('active-portal');
+    el.style.pointerEvents = 'none';
+
+    // Cinematic Chromatic Pulse (Dimensional Shift)
+    animate('body', { filter: ['blur(0px) brightness(1) contrast(1)', 'blur(10px) brightness(2) contrast(1.5)', 'blur(0px) brightness(1) contrast(1)'] }, { duration: 1.2 });
+
+    // Cinematic Spring-Loaded Entrance
+    const others = document.querySelectorAll(`.manuscript:not(#ms-${index})`);
+    animate(others, { opacity: 0, translateZ: -1500, rotateY: 45 }, { duration: 1 });
+    animate(['.gate', '.seal', '.vault-stats'], { opacity: 0, y: -150 }, { duration: 1, easing: spring() });
+
+    // Portal Zoom (Framer-Motion style spring)
+    animate(el, {
+        top: '50%', left: '50%',
+        x: '-50%', y: '-50%',
+        width: '95vw', maxWidth: '1200px',
+        rotateY: 0, scale: 1.1
+    }, {
+        easing: spring({ stiffness: 60, damping: 12, mass: 1.2 })
+    });
+
+    animate('.reader-view', { display: 'flex', opacity: 1 }, { delay: 0.6, duration: 1.5 });
+    
+    // Animate reader text reveal
+    typewriterEffect(document.getElementById('readerTitle'), data.title, 1500);
+    document.getElementById('readerText').textContent = data.full;
+    animate('#readerText', { opacity: [0, 1], y: [40, 0] }, { delay: 1, duration: 1.2, easing: spring() });
+}
+
+function closePortal() {
+    const { animate, spring } = motion;
+    document.body.classList.remove('reading');
+    const el = document.querySelector('.active-portal');
+    
+    animate('.reader-view', { opacity: 0 }, { duration: 0.5 });
+    
+    if (el) {
+        animate(el, { opacity: 1 }, { duration: 0.5 }); // Placeholder for return
+    }
+
+    animate(['.gate', '.seal', '.vault-stats'], { opacity: 1, y: 0 }, { 
+        delay: 0.2, 
+        easing: spring() 
+    });
+
+    setTimeout(() => {
+        if (el) {
+            el.classList.remove('active-portal');
+            el.style.pointerEvents = 'auto';
+            el.style.cssText = ''; 
+        }
+        renderVault();
+    }, 1000);
+}
+
+/* ═══════════════════════════════════
+   SEARCH & FILTER EVENTS
+   ═══════════════════════════════════ */
+document.getElementById('searchInput').addEventListener('input', e => {
+    searchTerm = e.target.value.trim();
+    renderVault();
+});
+
+document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        activeCat = tab.dataset.cat;
+        renderVault();
+    });
+});
+
+/* ═══════════════════════════════════
+   LETTER-BY-LETTER TITLE ANIMATION
+   ═══════════════════════════════════ */
+function splitTextToChars(el) {
+    const text = el.childNodes[0].textContent.trim();
+    const span = el.querySelector('span');
+    el.childNodes[0].textContent = '';
+    text.split('').forEach(ch => {
+        const c = document.createElement('span');
+        c.className = 'char';
+        c.textContent = ch === ' ' ? '\u00A0' : ch;
+        el.insertBefore(c, span);
+    });
+}
+
+/* ═══════════════════════════════════
+   WORD-BY-WORD SUBTITLE
+   ═══════════════════════════════════ */
+function splitSubToWords(el) {
+    const text = el.textContent.trim();
+    el.textContent = '';
+    el.style.opacity = 1;
+    el.style.transform = 'none';
+    text.split(' ').forEach((w, i) => {
+        const s = document.createElement('span');
+        s.className = 'word';
+        s.textContent = w;
+        el.appendChild(s);
+        if (i < text.split(' ').length - 1) el.appendChild(document.createTextNode(' '));
+    });
+}
+
+/* ═══════════════════════════════════
+   LOADING SEQUENCE
+   ═══════════════════════════════════ */
+window.addEventListener('load', () => {
+    const titleEl = document.getElementById('gateTitle');
+    const subEl = document.getElementById('gateSub');
+
+    splitTextToChars(titleEl);
+    splitSubToWords(subEl);
+
+    setTimeout(() => {
+        document.getElementById('loadingVeil').classList.add('done');
+
+        // Cinematic gate entrance timeline
+        const entrance = gsap.timeline({ delay: 0.3 });
+
+        // Ornament grows in
+        entrance.from('.gate-ornament', { width: 0, opacity: 0, duration: 1, ease: 'expo.out' });
+
+        // Title letters cascade
+        entrance.to('.gate-title .char', {
+            opacity: 1, y: 0, rotateX: 0,
+            duration: 0.6,
+            stagger: { each: 0.04, from: 'center' },
+            ease: 'back.out(2)'
+        }, '-=0.3');
+
+        // English subtitle fades
+        entrance.to('.gate-title span', { opacity: 1, duration: 0.8, ease: 'power2.out' }, '-=0.2');
+
+        // Subtitle words reveal
+        entrance.to('.gate-subtitle .word', {
+            opacity: 1, y: 0,
+            duration: 0.5,
+            stagger: 0.06,
+            ease: 'expo.out'
+        }, '-=0.4');
+
+        // Scroll hint appears
+        entrance.to('#scrollHint', { opacity: 1, duration: 0.8, ease: 'power2.out' });
+
+    }, 1800);
+
+    renderVault();
+});
+
+/* ═══════════════════════════════════
+   SCROLL TRIGGERS & PROGRESS
+   ═══════════════════════════════════ */
+gsap.registerPlugin(ScrollTrigger);
+
+// Fade out gate on scroll with parallax
+ScrollTrigger.create({
+    trigger: '#seal',
+    start: 'top bottom',
+    end: 'top center',
+    scrub: 1,
+    onUpdate: self => {
+        const p = self.progress;
+        gsap.set('#gate', { opacity: 1 - p, scale: 1 - p * 0.05, y: p * -60 });
+    }
+});
+
+// Scroll-triggered reveal for search & tabs
+ScrollTrigger.create({
+    trigger: '#seal',
+    start: 'top 80%',
+    once: true,
+    onEnter: () => {
+        gsap.from('.search-field', { opacity: 0, y: 30, duration: 0.8, ease: 'expo.out' });
+        gsap.from('.category-tabs', { opacity: 0, y: 20, duration: 0.8, delay: 0.2, ease: 'expo.out' });
+    }
+});
+
+// Scroll-triggered reveal for stats
+ScrollTrigger.create({
+    trigger: '.vault-stats',
+    start: 'top 85%',
+    once: true,
+    onEnter: () => {
+        gsap.from('.vault-stats', { opacity: 0, x: -30, duration: 0.8, ease: 'expo.out' });
+    }
+});
+
+// Parallax on cover images while scrolling
+ScrollTrigger.create({
+    trigger: '.vault',
+    start: 'top bottom',
+    end: 'bottom top',
+    scrub: 1,
+    onUpdate: () => {
+        document.querySelectorAll('.ms-cover img').forEach(img => {
+            const rect = img.getBoundingClientRect();
+            const viewH = window.innerHeight;
+            const pct = (rect.top + rect.height / 2) / viewH;
+            gsap.set(img, { y: (pct - 0.5) * -30 });
+        });
+    }
+});
+
+// Scroll progress bar
+window.addEventListener('scroll', () => {
+    const scrolled = window.scrollY;
+    const total = document.documentElement.scrollHeight - window.innerHeight;
+    const pct = total > 0 ? (scrolled / total) * 100 : 0;
+    document.getElementById('scrollBar').style.width = pct + '%';
+});
+
+// Update stats counter with animation
+function updateStats(count) {
+    const arabic = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
+    const num = String(count).split('').map(d => arabic[+d]).join('');
+    const el = document.getElementById('statCount');
+    gsap.to(el, {
+        opacity: 0, y: -10, duration: 0.2,
+        onComplete: () => {
+            el.textContent = num + ' مخطوطات';
+            gsap.to(el, { opacity: 1, y: 0, duration: 0.4, ease: 'back.out' });
+        }
+    });
+}
+
+/* ═══════════════════════════════════
+   MAGNETIC BUTTONS
+   ═══════════════════════════════════ */
+document.querySelectorAll('.tab').forEach(btn => {
+    btn.addEventListener('mousemove', e => {
+        const r = btn.getBoundingClientRect();
+        const x = e.clientX - r.left - r.width / 2;
+        const y = e.clientY - r.top - r.height / 2;
+        gsap.to(btn, { x: x * 0.3, y: y * 0.3, duration: 0.3, ease: 'power2.out' });
+    });
+    btn.addEventListener('mouseleave', () => {
+        gsap.to(btn, { x: 0, y: 0, duration: 0.5, ease: 'elastic.out(1, 0.4)' });
+    });
+});
+
+/* ═══════════════════════════════════
+   AMBIENT BREATHING
+   ═══════════════════════════════════ */
+// Footer breathing
+gsap.to('.footer-sigil p', {
+    opacity: 0.7, duration: 2, repeat: -1, yoyo: true, ease: 'sine.inOut'
+});
+
+// Vignette subtle pulse
+gsap.to('.vignette', {
+    opacity: 0.85, duration: 4, repeat: -1, yoyo: true, ease: 'sine.inOut'
+});
+</script>
+</body>
+</html>
